@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/imRanDan/creator-growth-api/internal/api"
 	"github.com/imRanDan/creator-growth-api/internal/database"
 	"github.com/joho/godotenv"
 )
@@ -45,6 +46,10 @@ func main() {
 			"database": "connected",
 		})
 	})
+
+	//Auth routes
+	r.POST("/api/auth/register", api.Register)
+	r.POST("/api/auth/login", api.Login)
 
 	//Start Server
 	fmt.Printf("Server starting on port %s...\n", port)

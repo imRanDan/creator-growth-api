@@ -9,31 +9,31 @@ import (
 )
 
 type RegisterRequest struct {
-	Email		string		`json:"email" binding:"required,email"`
-	Password	string		`json:"password" binding:"required,min=6"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
 }
 
 type LoginRequest struct {
-	Email		string		`json:"email" binding:"required,email"`
-	Password	string		`json:"password" binding:"required`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required`
 }
 
 type AuthResponse struct {
-	Token	string				 `json:"token"`
-	User	models.UserResponse	 `json:"user"`
+	Token string              `json:"token"`
+	User  models.UserResponse `json:"user"`
 }
 
 func Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) 
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	//Create User
 	user, err := services.CreateUser(req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H("error": "Failed to create user"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
@@ -48,10 +48,41 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, AuthResponse{
 		Token: token,
 		User: models.UserResponse{
-			ID:			user.ID,
-			Email:		user.Email,
-			CreatedAt:	user.CreatedAt,
+			ID:        user.ID,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt,
 		},
 	})
 }
 
+func Login(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	//Authenticate user
+	user, err := services.AuthenticateUser(req.Email, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	//Generate token
+	token, err := services.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	//return response
+	c.JSON(http.StatusOK, AuthResponse{
+		Token: token,
+		User: models.UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt,
+		},
+	})
+}
