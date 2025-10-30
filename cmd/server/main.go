@@ -23,6 +23,11 @@ func main() {
 	}
 	defer database.Close()
 
+	//Run the migrations
+	if err := database.RunMigrations(); err != nil {
+		log.Fatal("Failed to run migrations:", err)
+	}
+
 	//Get port from env or default to 8080
 	port := os.Getenv("PORT")
 	if port == "" {
