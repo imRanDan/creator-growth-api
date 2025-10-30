@@ -51,6 +51,13 @@ func main() {
 	r.POST("/api/auth/register", api.Register)
 	r.POST("/api/auth/login", api.Login)
 
+	//Protected Routes (requires auth)
+	protected := r.Group("/api")
+	protected.Use(api.AuthMiddleware())
+	{
+		protected.GET("/user/me", api.GetCurrentUser)
+	}
+
 	//Start Server
 	fmt.Printf("Server starting on port %s...\n", port)
 	if err := r.Run(":" + port); err != nil {

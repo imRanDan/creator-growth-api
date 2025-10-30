@@ -86,3 +86,28 @@ func Login(c *gin.Context) {
 		},
 	})
 }
+
+func GetCurrentUser(c *gin.Context) {
+	//Get user email from context (set by middleware)
+	email, exists := c.Get("user_email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	//Get full user from database
+	user, err := services.GetUserByEmail(email.(string))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": models.UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt,
+		},
+		"message": "Authenticated successfully",
+	})
+}
