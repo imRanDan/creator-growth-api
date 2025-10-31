@@ -48,7 +48,7 @@ func InstagramCallback(c *gin.Context) {
 	}
 
 	// Save Instagram account
-	err = services.SaveInstagramAccount(userID.(string), profile.ID, profile.Username, tokenResp.AccessToken)
+	err = services.SaveInstagramAccount(userId.(string), profile.ID, profile.Username, tokenResp.AccessToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Instagram account"})
 		return
@@ -57,5 +57,42 @@ func InstagramCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Instagram account connected successfully",
 		"username": profile.Username,
+	})
+}
+
+func GetInstagramMedia(c *gin.Context) {
+	userId, _ := c.Get("user_id")
+
+	//Get Instagram user from the DB
+	account, err := services.GetInstagramAccount(userId.(string))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Instagram account not connected"})
+		return
+	}
+
+	//Fetch media from Instagram API
+	media, err := services.FetchUserMedia(account.AccessToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch media"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"media": media,
+	})
+}
+
+// Disconnect Instagram account
+func DisconnectInstagram(c *gin.Context) {
+	userId, _ := c.Get("user_id")
+
+	err := services.DeleteInstagramAccount(userId.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to disconnect account"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Instagram account disconnected",
 	})
 }
