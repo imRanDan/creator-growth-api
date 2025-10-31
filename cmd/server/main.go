@@ -56,6 +56,10 @@ func main() {
 	protected.Use(api.AuthMiddleware())
 	{
 		protected.GET("/user/me", api.GetCurrentUser)
+
+		//Instagram routes
+		protected.GET("/instagram/connect", api.ConnectInstagram)
+		protected.GET("/instagram/callback", api.InstagramCallback)
 	}
 
 	//Start Server
