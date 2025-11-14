@@ -14,7 +14,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID, email string) (string, error) {
+// GenerateStateToken creates a short-lived JWT for OAuth state (10 minutes)
+func GenerateStateToken(userID, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", errors.New("JWT_SECRET not set")
@@ -24,7 +25,7 @@ func GenerateToken(userID, email string) (string, error) {
 		UserID: userID,
 		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

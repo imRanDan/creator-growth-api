@@ -41,7 +41,7 @@ func main() {
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":   "healty",
+			"status":   "healthy",
 			"message":  "Creator Growth API is running",
 			"database": "connected",
 		})
@@ -55,7 +55,10 @@ func main() {
 	protected := r.Group("/api")
 	protected.Use(api.AuthMiddleware())
 	{
+		protected.POST("/auth/register", api.Register)
+		protected.POST("/auth/login", api.Login)
 		protected.GET("/user/me", api.GetCurrentUser)
+		protected.GET("/instagram/connect", api.ConnectInstagram)
 
 		//Instagram routes
 		protected.GET("/instagram/connect", api.ConnectInstagram)
