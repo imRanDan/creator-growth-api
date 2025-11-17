@@ -75,23 +75,25 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Authenticate
 	user, err := services.AuthenticateUser(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	// Generate JWT
 	token, err := services.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
-	c.JSON(http.StatusOK, AuthResponse{
-		Token: token,
-		User: models.UserResponse{
+	// Set auth header for convenience and return token metadata
+	c.Header("Authorization", "Bearer "+token)
+	c.JSON(http.StatusOK, gin.H{
+		"token":      token,
+		"token_type": "bearer",
+		"expires_in": 24 * 60 * 60, // seconds (matches GenerateToken)
+		"user": models.UserResponse{
 			ID:        user.ID,
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt,

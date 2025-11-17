@@ -9,8 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imRanDan/creator-growth-api/internal/api"
 	"github.com/imRanDan/creator-growth-api/internal/database"
+	"github.com/imRanDan/creator-growth-api/internal/services"
 	"github.com/joho/godotenv"
-	"github.com/ulule/limiter/v3"
+
+	limiter "github.com/ulule/limiter/v3"
+	ginmiddleware "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	memory "github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
@@ -55,7 +58,8 @@ func main() {
 	//rate limiter setup (5 attemps per minute peer IP)
 	rate, _ := limiter.NewRateFromFormatted("5-M")
 	store := memory.NewStore()
-	limitedMiddleware := limiter.New(store, rate).Middleware()
+	limiterInstance := limiter.New(store, rate)
+	limitedMiddleware := ginmiddleware.NewMiddleware(limiterInstance)
 
 	//Pub routes
 	r.POST("/api/auth/register", api.Register)
@@ -68,7 +72,7 @@ func main() {
 	{
 		protected.GET("/user/me", api.GetCurrentUser)
 		protected.GET("/instagram/connect", api.ConnectInstagram)
-		protected.GET("/growth/stats", api.GetGrowthStats)
+		// protected.GET("/growth/stats", api.GetGrowthStats) //enable when you add this
 	}
 
 	//Start Server
