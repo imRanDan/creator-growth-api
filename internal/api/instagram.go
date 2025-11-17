@@ -26,11 +26,12 @@ func ConnectInstagram(c *gin.Context) {
 		return
 	}
 
-	// authURL := "https://api.instagram.com/oauth/authorize" +
-	// 	"?client_id=" + clientID +
-	// 	"&redirect_uri=" + redirectURI +
-	// 	"&scope=user_profile,user_media" +
-	// 	"&response_type=code"
+	// Generate state token bound to this user (short-lived)
+	state, err := services.GenerateStateToken(userID, userEmail)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state token"})
+		return
+	}
 
 	authURL := fmt.Sprintf(
 		"https://api.instagram.com/oauth/authorize?client_id=%s&redirect_uri=%s&scope=user_profile,user_media&response_type=code&state=%s",

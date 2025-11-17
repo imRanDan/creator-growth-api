@@ -10,6 +10,8 @@ import (
 	"github.com/imRanDan/creator-growth-api/internal/api"
 	"github.com/imRanDan/creator-growth-api/internal/database"
 	"github.com/joho/godotenv"
+	"github.com/ulule/limiter/v3"
+	memory "github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 func main() {
@@ -29,6 +31,9 @@ func main() {
 		log.Fatal("Failed to run migrations:", err)
 	}
 
+	//start background job
+	services.StartTokenRefreshJob()
+
 	//Get port from env or default to 8080
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -47,22 +52,23 @@ func main() {
 		})
 	})
 
-	//Auth routes
-	r.POST("/api/auth/register", api.Register)
-	r.POST("/api/auth/login", api.Login)
+	//rate limiter setup (5 attemps per minute peer IP)
+	rate, _ := limiter.NewRateFromFormatted("5-M")
+	store := memory.NewStore()
+	limitedMiddleware := limiter.New(store, rate).Middleware()
 
-	//Protected Routes (requires auth)
+	//Pub routes
+	r.POST("/api/auth/register", api.Register)
+	r.POST("/api/auth/login", limitedMiddleware, api.Login) // rate limit on login
+	r.GET("/auth/instagram/callback", api.InstagramCallback)
+
+	//Protected Routes (requires auth/JWT)
 	protected := r.Group("/api")
 	protected.Use(api.AuthMiddleware())
 	{
-		protected.POST("/auth/register", api.Register)
-		protected.POST("/auth/login", api.Login)
 		protected.GET("/user/me", api.GetCurrentUser)
 		protected.GET("/instagram/connect", api.ConnectInstagram)
-
-		//Instagram routes
-		protected.GET("/instagram/connect", api.ConnectInstagram)
-		protected.GET("/instagram/callback", api.InstagramCallback)
+		protected.GET("/growth/stats", api.GetGrowthStats)
 	}
 
 	//Start Server

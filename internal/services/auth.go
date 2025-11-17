@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"errors"
 
 	"github.com/imRanDan/creator-growth-api/internal/database"
@@ -78,7 +79,7 @@ func GetUserByEmail(email string) (*models.User, error) {
 		&user.UpdatedAt,
 	)
 	if err != nil {
-		if err == database.ErrNoRows {
+		if err == sql.ErrNoRows {
 			return nil, errors.New("user not found")
 		}
 		return nil, err
