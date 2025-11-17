@@ -1,13 +1,18 @@
 package services
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/imRanDan/creator-growth-api/internal/database"
 )
 
 // === SHORT-LIVED TOKEN RESPONSE ===
@@ -176,24 +181,103 @@ func FetchUserMedia(accessToken string, limit int) ([]InstagramMedia, error) {
 	return mediaResp.Data, nil
 }
 
-// === DATABASE OPERATIONS (TO BE IMPLEMENTED) ===
-func SaveInstagramAccount(userID, igUserID, username, accessToken string) error {
-	// TODO: Save to DB with upsert
-	// Store: user_id, instagram_user_id, username, access_token, expires_at
-	fmt.Printf("Saving IG account: user=%s, ig=%s, @%s\n", userID, igUserID, username)
+// === DATABASE TYPES & OPERATIONS ===
+
+// InstagramAccount represents a connected IG account
+type InstagramAccount struct {
+	ID            string
+	UserID        string
+	IGUserID      string
+	Username      string
+	AccessToken   string
+	TokenExpireAt time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Followers     sql.NullInt64
+}
+
+// SaveInstagramAccount inserts or updates an instagram_accounts row
+func SaveInstagramAccount(a *InstagramAccount) error {
+	if a == nil {
+		return errors.New("nil account")
+	}
+	if a.ID == "" {
+		a.ID = uuid.New().String()
+	}
+	now := time.Now().UTC()
+	a.UpdatedAt = now
+	if a.CreatedAt.IsZero() {
+		a.CreatedAt = now
+	}
+
+	query := `
+        INSERT INTO instagram_accounts
+          (id, user_id, ig_user_id, username, access_token, token_expires_at, created_at, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        ON CONFLICT (ig_user_id) DO UPDATE
+          SET username = EXCLUDED.username,
+              access_token = EXCLUDED.access_token,
+              token_expires_at = EXCLUDED.token_expires_at,
+              updated_at = EXCLUDED.updated_at
+        RETURNING id
+    `
+	var id string
+	err := database.DB.QueryRow(
+		query,
+		a.ID,
+		a.UserID,
+		a.IGUserID,
+		a.Username,
+		a.AccessToken,
+		a.TokenExpireAt,
+		a.CreatedAt,
+		a.UpdatedAt,
+	).Scan(&id)
+	if err != nil {
+		return err
+	}
+	a.ID = id
 	return nil
 }
 
-func GetInstagramAccount(userID string) (*struct {
-	AccessToken string
-	ExpiresAt   time.Time
-}, error) {
-	// TODO: Fetch from DB
-	return nil, fmt.Errorf("not implemented")
+// GetInstagramAccountByID returns account by internal id
+func GetInstagramAccountByID(id string) (*InstagramAccount, error) {
+	var a InstagramAccount
+	query := `SELECT id, user_id, ig_user_id, username, access_token, token_expires_at, created_at, updated_at FROM instagram_accounts WHERE id = $1`
+	err := database.DB.QueryRow(query, id).Scan(
+		&a.ID, &a.UserID, &a.IGUserID, &a.Username, &a.AccessToken, &a.TokenExpireAt, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
 }
 
-func DeleteInstagramAccount(userID string) error {
-	// TODO: Delete from DB
-	fmt.Printf("Deleting IG account for user: %s\n", userID)
+// GetInstagramAccountByUserID returns the first IG account for a given app user
+func GetInstagramAccountByUserID(userID string) (*InstagramAccount, error) {
+	var a InstagramAccount
+	query := `SELECT id, user_id, ig_user_id, username, access_token, token_expires_at, created_at, updated_at FROM instagram_accounts WHERE user_id = $1 LIMIT 1`
+	err := database.DB.QueryRow(query, userID).Scan(
+		&a.ID, &a.UserID, &a.IGUserID, &a.Username, &a.AccessToken, &a.TokenExpireAt, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// DeleteInstagramAccountByUserID removes an account for the given app user
+func DeleteInstagramAccountByUserID(userID string) error {
+	_, err := database.DB.Exec("DELETE FROM instagram_accounts WHERE user_id = $1", userID)
+	return err
+}
+
+// FetchAndStorePosts: skeleton that will call IG Graph API and upsert posts
+func FetchAndStorePosts(accountID string) error {
+	// TODO:
+	// 1) load instagram_accounts by id, get IGUserID & AccessToken
+	// 2) call GET https://graph.instagram.com/{ig_user_id}/media?fields=id,caption,media_type,media_url,timestamp,like_count,comments_count&access_token=...
+	// 3) upsert into instagram_posts table
+	// 4) return
 	return nil
 }
