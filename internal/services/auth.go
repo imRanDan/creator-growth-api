@@ -6,6 +6,7 @@ import (
 
 	"github.com/imRanDan/creator-growth-api/internal/database"
 	"github.com/imRanDan/creator-growth-api/internal/models"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,10 +40,10 @@ func CreateUser(email, password string) (*models.User, error) {
 
 	// Insert into DB
 	query := `
-		INSERT INTO users (email, password)
-		VALUES ($1, $2)
-		RETURNING id, email, created_at, updated_at
-	`
+        INSERT INTO users (email, password)
+        VALUES ($1, $2)
+        RETURNING id, email, created_at, updated_at
+    `
 
 	var user models.User
 	err = database.DB.QueryRow(query, email, hashedPassword).Scan(
@@ -52,8 +53,8 @@ func CreateUser(email, password string) (*models.User, error) {
 		&user.UpdatedAt,
 	)
 	if err != nil {
-		// Handle duplicate email
-		if err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"` {
+		// Handle duplicate email (Postgres unique violation code 23505)
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return nil, errors.New("email already in use")
 		}
 		return nil, err

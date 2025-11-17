@@ -34,6 +34,26 @@ func GenerateStateToken(userID, email string) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// GenerateToken creates a standard application JWT (e.g. 24h) for auth sessions
+func GenerateToken(userID, email string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT_SECRET not set")
+	}
+
+	claims := Claims{
+		UserID: userID,
+		Email:  email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
 func ValidateToken(tokenString string) (*Claims, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
