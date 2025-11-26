@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -279,5 +280,34 @@ func FetchAndStorePosts(accountID string) error {
 	// 2) call GET https://graph.instagram.com/{ig_user_id}/media?fields=id,caption,media_type,media_url,timestamp,like_count,comments_count&access_token=...
 	// 3) upsert into instagram_posts table
 	// 4) return
-	return nil
+	account, err := GetInstagramAccountByID(accountID)
+	if err != nil {
+		return fmt.Errorf("failed to load account: %w", err)
+	}
+
+	if account.IGUserID == "" || account.AccessToken == "" {
+		return fmt.Errorf("account missing ig_user_id or access token")
+	}
+
+	//2) fetch recent media from IG Graph API
+	media, err := FetchUserMedia(account.AccessToken, 50) //fetches the last 50 posts
+	if err != nil {
+		return fmt.Errorf("failed to fetch user media: %w", err)
+	}
+
+	if len(media) == 0 {
+		log.Printf("no media returned for account %s", accountID)
+		return nil
+	}
+
+	// 3) upsert (update + insert) each post into instagram_posts table
+	for _, m := range media {
+		post := &InstagramPost{
+			IGPostID:  m.ID,
+			AccountID: accountID,
+			Caption:   m.Caption,
+			MediaType: m.MediaType,
+			MediaURL:  m.MediaURL,
+		}
+	}
 }
