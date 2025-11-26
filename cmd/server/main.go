@@ -72,6 +72,8 @@ func main() {
 	{
 		protected.GET("/user/me", api.GetCurrentUser)
 		protected.GET("/instagram/connect", api.ConnectInstagram)
+		protected.POST("/instagram/refresh", api.RefreshInstagramPosts)
+		protected.GET("/instagram/posts", api.GetInstagramPosts)
 		// protected.GET("/growth/stats", api.GetGrowthStats) //enable when you add this
 	}
 

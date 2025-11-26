@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,19 @@ import (
 type TokenResponse struct {
 	AccessToken string `json:"access_token"`
 	UserID      int64  `json:"user_id"`
+}
+
+type InstagramPost struct {
+	ID           string    `db:"id"`
+	IGPostID     string    `db:"ig_post_id"`
+	AccountID    string    `db:"account_id"`
+	Caption      string    `db:"caption"`
+	MediaType    string    `db:"media_type"`
+	MediaURL     string    `db:"media_url"`
+	LikeCount    int       `db:"like_count"`
+	CommentCount int       `db:"comment_count"`
+	PostedAt     time.Time `db:"posted_at"`
+	FetchedAt    time.Time `db:"fetched_at"`
 }
 
 // ExchangeCodeForToken exchanges Instagram auth code for short-lived access token
@@ -303,11 +317,127 @@ func FetchAndStorePosts(accountID string) error {
 	// 3) upsert (update + insert) each post into instagram_posts table
 	for _, m := range media {
 		post := &InstagramPost{
-			IGPostID:  m.ID,
-			AccountID: accountID,
-			Caption:   m.Caption,
-			MediaType: m.MediaType,
-			MediaURL:  m.MediaURL,
+			IGPostID:     m.ID,
+			AccountID:    accountID,
+			Caption:      m.Caption,
+			MediaType:    m.MediaType,
+			MediaURL:     m.MediaURL,
+			LikeCount:    m.LikeCount,
+			CommentCount: m.CommentCount,
+			FetchedAt:    time.Now().UTC(),
+		}
+		// parse timestamp from IG (ISO 8601)
+		if m.Timestamp != "" {
+			if t, err := time.Parse(time.RFC3339, m.Timestamp); err == nil {
+				post.PostedAt = t
+			}
+		}
+
+		if err := UpsertInstagramPost(post); err != nil {
+			log.Printf("failed to upsert post %s: %v", m.ID, err)
+			// continue on error so we don't fail entire batch
 		}
 	}
+	log.Printf("✅ fetched and stored %d posts for account %s", len(media), accountID)
+	return nil
+}
+
+// UpsertInstagramPost inserts or updates a post in instagram_posts
+func UpsertInstagramPost(post *InstagramPost) error {
+	if post == nil {
+		return errors.New("nil post")
+	}
+	if post.ID == "" {
+		post.ID = uuid.New().String()
+	}
+	if post.FetchedAt.IsZero() {
+		post.FetchedAt = time.Now().UTC()
+	}
+
+	query := `
+		INSERT INTO instagram_posts
+          (id, ig_post_id, account_id, caption, media_type, media_url, like_count, comments_count, posted_at, fetched_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        ON CONFLICT (account_id, ig_post_id) DO UPDATE
+          SET caption = EXCLUDED.caption,
+              media_type = EXCLUDED.media_type,
+              media_url = EXCLUDED.media_url,
+              like_count = EXCLUDED.like_count,
+              comments_count = EXCLUDED.comments_count,
+              posted_at = EXCLUDED.posted_at,
+              fetched_at = EXCLUDED.fetched_at
+        RETURNING id
+	`
+
+	var id string
+	err := database.DB.QueryRow(
+		query,
+		post.ID,
+		post.IGPostID,
+		post.AccountID,
+		post.Caption,
+		post.MediaType,
+		post.MediaURL,
+		post.LikeCount,
+		post.CommentCount,
+		post.PostedAt,
+		post.FetchedAt,
+	).Scan(&id)
+
+	if err != nil {
+		return fmt.Errorf("failed to upsert post: %w", err)
+	}
+	post.ID = id
+	return nil
+}
+
+// GetPostsBy AccountID returns the recent posts for an account
+func GetPostsByAccountID(accountID string, limit int) ([]InstagramPost, error) {
+	if limit <= 0 {
+		limit = 25
+	}
+
+	query := `
+		SELECT id, ig_post_id, account_id, caption, media_type, media_url, like_count, comments_count, posted_at, fetched_at
+		FROM instagram_posts
+		WHERE account_id = $1
+		ORDER BY posted_at DESC
+		LIMIT $2
+	`
+
+	rows, err := database.DB.Query(query, accountID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []InstagramPost
+	for rows.Next() {
+		var p InstagramPost
+		if err := rows.Scan(
+			&p.ID, &p.IGPostID, &p.AccountID, &p.Caption, &p.MediaType, &p.MediaURL,
+			&p.LikeCount, &p.CommentCount, &p.PostedAt, &p.FetchedAt,
+		); err != nil {
+			return nil, err
+		}
+		posts = append(posts, p)
+	}
+
+	return posts, rows.Err()
+}
+
+// ExtractHashtags extracts hashtags from a caption string
+func ExtractHashtags(caption string) []string {
+	var hashtags []string
+	words := strings.Fields(caption)
+	for _, word := range words {
+		if strings.HasPrefix(word, "#") {
+			//clean punctuation
+			tag := strings.Trim(word, ".,!?;:")
+			if len(tag) > 1 {
+				hashtags = append(hashtags, strings.ToLower(tag))
+			}
+		}
+	}
+	return hashtags
 }

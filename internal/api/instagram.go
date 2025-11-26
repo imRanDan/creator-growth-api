@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -145,5 +146,66 @@ func InstagramCallback(c *gin.Context) {
 		"status":   "connected",
 		"username": me.Username,
 		"user":     userEmail,
+	})
+}
+
+// Refresh IG posts manually triggers fetch + store for auth users
+func RefreshInstagramPosts(c *gin.Context) {
+	userID := c.GetString("user_id") // set by AuthMiddleware
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	// get the user's connected IG account
+	account, err := services.GetInstagramAccountByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no instagram account connected"})
+		return
+	}
+
+	// trigger fetch in background (non-blocking)
+	go func() {
+		if err := services.FetchAndStorePosts(account.ID); err != nil {
+			log.Printf("FetchAndStorePosts error: %v", err)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"status": "fetch scheduled",
+		"account": map[string]string{
+			"id":       account.ID,
+			"username": account.Username,
+		},
+	})
+}
+
+// GetInstagramPosts returns recent stored posts for auth users IG Account
+func GetInstagramPosts(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	account, err := services.GetInstagramAccountByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no instagram account connected"})
+		return
+	}
+
+	posts, err := services.GetPostsByAccountID(account.ID, 50)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch posts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"account": map[string]string{
+			"id":       account.ID,
+			"username": account.Username,
+		},
+		"posts_count": len(posts),
+		"posts":       posts,
 	})
 }
