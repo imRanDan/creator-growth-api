@@ -326,10 +326,19 @@ func FetchAndStorePosts(accountID string) error {
 			CommentCount: m.CommentCount,
 			FetchedAt:    time.Now().UTC(),
 		}
-		// parse timestamp from IG (ISO 8601)
+		// parse timestamp from IG (ISO 8601) - Instagram uses +0000 format not +00:00
 		if m.Timestamp != "" {
-			if t, err := time.Parse(time.RFC3339, m.Timestamp); err == nil {
-				post.PostedAt = t
+			// Try multiple formats
+			formats := []string{
+				time.RFC3339,
+				"2006-01-02T15:04:05-0700", // Instagram's format
+				"2006-01-02T15:04:05+0000",
+			}
+			for _, format := range formats {
+				if t, err := time.Parse(format, m.Timestamp); err == nil {
+					post.PostedAt = t
+					break
+				}
 			}
 		}
 
@@ -440,4 +449,183 @@ func ExtractHashtags(caption string) []string {
 		}
 	}
 	return hashtags
+}
+
+// === GROWTH STATS ===
+
+// GrowthStats contains engagement metrics for a creator
+type GrowthStats struct {
+	// Current period stats
+	TotalPosts         int     `json:"total_posts"`
+	TotalLikes         int     `json:"total_likes"`
+	TotalComments      int     `json:"total_comments"`
+	TotalEngagement    int     `json:"total_engagement"`
+	AvgLikesPerPost    float64 `json:"avg_likes_per_post"`
+	AvgCommentsPerPost float64 `json:"avg_comments_per_post"`
+	EngagementRate     float64 `json:"engagement_rate"` // as percentage
+
+	// Best performing post
+	BestPost *BestPostInfo `json:"best_post,omitempty"`
+
+	// Trend compared to previous period
+	LikesTrend    float64 `json:"likes_trend"`    // percentage change
+	CommentsTrend float64 `json:"comments_trend"` // percentage change
+	PostingTrend  float64 `json:"posting_trend"`  // percentage change
+
+	// Posting frequency
+	PostsThisWeek  int `json:"posts_this_week"`
+	PostsThisMonth int `json:"posts_this_month"`
+
+	// Period info
+	PeriodDays int    `json:"period_days"`
+	Message    string `json:"message"` // friendly summary for casual creators
+}
+
+// BestPostInfo contains info about the best performing post
+type BestPostInfo struct {
+	ID           string    `json:"id"`
+	Caption      string    `json:"caption"`
+	MediaType    string    `json:"media_type"`
+	MediaURL     string    `json:"media_url"`
+	LikeCount    int       `json:"like_count"`
+	CommentCount int       `json:"comment_count"`
+	Engagement   int       `json:"engagement"`
+	PostedAt     time.Time `json:"posted_at"`
+}
+
+// GetGrowthStats calculates engagement metrics for an account
+func GetGrowthStats(accountID string, periodDays int) (*GrowthStats, error) {
+	if periodDays <= 0 {
+		periodDays = 30 // default to last 30 days
+	}
+
+	stats := &GrowthStats{PeriodDays: periodDays}
+
+	// Get current period stats
+	currentQuery := `
+		SELECT 
+			COUNT(*) as post_count,
+			COALESCE(SUM(like_count), 0) as total_likes,
+			COALESCE(SUM(comments_count), 0) as total_comments
+		FROM instagram_posts
+		WHERE account_id = $1 
+		  AND posted_at >= NOW() - INTERVAL '1 day' * $2
+	`
+
+	err := database.DB.QueryRow(currentQuery, accountID, periodDays).Scan(
+		&stats.TotalPosts,
+		&stats.TotalLikes,
+		&stats.TotalComments,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current stats: %w", err)
+	}
+
+	stats.TotalEngagement = stats.TotalLikes + stats.TotalComments
+
+	// Calculate averages
+	if stats.TotalPosts > 0 {
+		stats.AvgLikesPerPost = float64(stats.TotalLikes) / float64(stats.TotalPosts)
+		stats.AvgCommentsPerPost = float64(stats.TotalComments) / float64(stats.TotalPosts)
+		stats.EngagementRate = (float64(stats.TotalEngagement) / float64(stats.TotalPosts))
+	}
+
+	// Get previous period stats for trend calculation
+	prevQuery := `
+		SELECT 
+			COUNT(*) as post_count,
+			COALESCE(SUM(like_count), 0) as total_likes,
+			COALESCE(SUM(comments_count), 0) as total_comments
+		FROM instagram_posts
+		WHERE account_id = $1 
+		  AND posted_at >= NOW() - INTERVAL '1 day' * $2
+		  AND posted_at < NOW() - INTERVAL '1 day' * $3
+	`
+
+	var prevPosts, prevLikes, prevComments int
+	err = database.DB.QueryRow(prevQuery, accountID, periodDays*2, periodDays).Scan(
+		&prevPosts, &prevLikes, &prevComments,
+	)
+	if err != nil {
+		// Not critical, just skip trends
+		log.Printf("Could not get previous period stats: %v", err)
+	} else {
+		// Calculate trends (percentage change)
+		if prevLikes > 0 {
+			stats.LikesTrend = ((float64(stats.TotalLikes) - float64(prevLikes)) / float64(prevLikes)) * 100
+		}
+		if prevComments > 0 {
+			stats.CommentsTrend = ((float64(stats.TotalComments) - float64(prevComments)) / float64(prevComments)) * 100
+		}
+		if prevPosts > 0 {
+			stats.PostingTrend = ((float64(stats.TotalPosts) - float64(prevPosts)) / float64(prevPosts)) * 100
+		}
+	}
+
+	// Get best performing post
+	bestQuery := `
+		SELECT id, caption, media_type, media_url, like_count, comments_count, posted_at
+		FROM instagram_posts
+		WHERE account_id = $1
+		  AND posted_at >= NOW() - INTERVAL '1 day' * $2
+		ORDER BY (like_count + comments_count) DESC
+		LIMIT 1
+	`
+
+	var best BestPostInfo
+	err = database.DB.QueryRow(bestQuery, accountID, periodDays).Scan(
+		&best.ID, &best.Caption, &best.MediaType, &best.MediaURL,
+		&best.LikeCount, &best.CommentCount, &best.PostedAt,
+	)
+	if err == nil {
+		best.Engagement = best.LikeCount + best.CommentCount
+		// Truncate caption for display
+		if len(best.Caption) > 100 {
+			best.Caption = best.Caption[:100] + "..."
+		}
+		stats.BestPost = &best
+	}
+
+	// Get posting frequency
+	weekQuery := `SELECT COUNT(*) FROM instagram_posts WHERE account_id = $1 AND posted_at >= NOW() - INTERVAL '7 days'`
+	database.DB.QueryRow(weekQuery, accountID).Scan(&stats.PostsThisWeek)
+
+	monthQuery := `SELECT COUNT(*) FROM instagram_posts WHERE account_id = $1 AND posted_at >= NOW() - INTERVAL '30 days'`
+	database.DB.QueryRow(monthQuery, accountID).Scan(&stats.PostsThisMonth)
+
+	// Generate friendly message for casual creators
+	stats.Message = generateGrowthMessage(stats)
+
+	return stats, nil
+}
+
+// generateGrowthMessage creates a friendly summary for casual creators
+func generateGrowthMessage(stats *GrowthStats) string {
+	if stats.TotalPosts == 0 {
+		return "No posts yet in this period. Time to share something! 📸"
+	}
+
+	var msg string
+
+	// Overall vibe
+	if stats.LikesTrend > 20 {
+		msg = "🔥 You're on fire! Engagement is way up."
+	} else if stats.LikesTrend > 5 {
+		msg = "📈 Nice! You're growing steadily."
+	} else if stats.LikesTrend > -5 {
+		msg = "😎 Holding steady - keep doing your thing."
+	} else if stats.LikesTrend > -20 {
+		msg = "📉 Slight dip, but no worries - it happens."
+	} else {
+		msg = "💪 Engagement is down, but consistency is key!"
+	}
+
+	// Add posting frequency note
+	if stats.PostsThisWeek == 0 {
+		msg += " Haven't posted this week though - your audience misses you!"
+	} else if stats.PostsThisWeek >= 5 {
+		msg += " You've been posting a lot - great hustle!"
+	}
+
+	return msg
 }

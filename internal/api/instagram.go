@@ -37,7 +37,7 @@ func ConnectInstagram(c *gin.Context) {
 	}
 
 	authURL := fmt.Sprintf(
-		"https://api.instagram.com/oauth/authorize?client_id=%s&redirect_uri=%s&scope=user_profile,user_media&response_type=code&state=%s",
+		"https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=%s&redirect_uri=%s&scope=instagram_business_basic,instagram_business_manage_insights&response_type=code&state=%s",
 		clientID, redirectURI, state,
 	)
 
@@ -67,7 +67,7 @@ func InstagramCallback(c *gin.Context) {
 	clientSecret := os.Getenv("INSTAGRAM_CLIENT_SECRET")
 	redirectURI := os.Getenv("INSTAGRAM_REDIRECT_URI")
 
-	// Exchange code for short-lived token
+	// Exchange code for short-lived token (new Instagram API endpoint)
 	shortURL := "https://api.instagram.com/oauth/access_token"
 	resp, err := http.PostForm(shortURL, map[string][]string{
 		"client_id":     {clientID},
@@ -207,5 +207,50 @@ func GetInstagramPosts(c *gin.Context) {
 		},
 		"posts_count": len(posts),
 		"posts":       posts,
+	})
+}
+
+// GetGrowthStats returns engagement metrics and trends for the authenticated user
+func GetGrowthStats(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	account, err := services.GetInstagramAccountByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no instagram account connected"})
+		return
+	}
+
+	// Get period from query param, default 30 days
+	periodDays := 30
+	if p := c.Query("period"); p != "" {
+		switch p {
+		case "7", "week":
+			periodDays = 7
+		case "14":
+			periodDays = 14
+		case "30", "month":
+			periodDays = 30
+		case "90":
+			periodDays = 90
+		}
+	}
+
+	stats, err := services.GetGrowthStats(account.ID, periodDays)
+	if err != nil {
+		log.Printf("GetGrowthStats error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to calculate growth stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"account": map[string]string{
+			"id":       account.ID,
+			"username": account.Username,
+		},
+		"stats": stats,
 	})
 }

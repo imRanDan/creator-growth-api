@@ -20,7 +20,7 @@ import (
 func main() {
 	//Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file foind")
+		log.Println("No .env file found")
 	}
 
 	//Connect to the database
@@ -74,7 +74,7 @@ func main() {
 		protected.GET("/instagram/connect", api.ConnectInstagram)
 		protected.POST("/instagram/refresh", api.RefreshInstagramPosts)
 		protected.GET("/instagram/posts", api.GetInstagramPosts)
-		// protected.GET("/growth/stats", api.GetGrowthStats) //enable when you add this
+		protected.GET("/growth/stats", api.GetGrowthStats)
 	}
 
 	//Start Server
