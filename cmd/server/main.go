@@ -46,6 +46,30 @@ func main() {
 	//Initialize Gin router
 	r := gin.Default()
 
+	// CORS middleware for frontend
+	r.Use(func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		// Allow localhost for dev, add your production domain later
+		allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				c.Header("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+		// Fallback for production - update this with your real domain
+		if origin == "" || c.GetHeader("Access-Control-Allow-Origin") == "" {
+			c.Header("Access-Control-Allow-Origin", "*") // TODO: Change to your domain
+		}
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
