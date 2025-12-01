@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const API_URL = 'http://localhost:8080'
+const API_URL = 'https://creator-growth-api-production.up.railway.app'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
