@@ -142,11 +142,12 @@ func InstagramCallback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":   "connected",
-		"username": me.Username,
-		"user":     userEmail,
-	})
+	// Redirect back to frontend
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173" // default for dev
+	}
+	c.Redirect(http.StatusTemporaryRedirect, frontendURL+"?connected=true")
 }
 
 // Refresh IG posts manually triggers fetch + store for auth users
