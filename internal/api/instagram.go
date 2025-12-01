@@ -61,7 +61,6 @@ func InstagramCallback(c *gin.Context) {
 		return
 	}
 	userID := claims.UserID
-	userEmail := claims.Email
 
 	clientID := os.Getenv("INSTAGRAM_CLIENT_ID")
 	clientSecret := os.Getenv("INSTAGRAM_CLIENT_SECRET")
