@@ -16,6 +16,17 @@ function App() {
     if (token) {
       fetchStats()
     }
+    
+    // Check if user just connected Instagram
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === 'true') {
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+      // Fetch stats to show new connection
+      if (token) {
+        fetchStats()
+      }
+    }
   }, [token])
 
   const signup = async (e) => {
@@ -91,6 +102,24 @@ function App() {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     setTimeout(fetchStats, 3000)
+  }
+
+  const connectInstagram = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/instagram/connect`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error || 'Failed to connect Instagram')
+      }
+    } catch (err) {
+      setError('Connection error')
+    }
+    setLoading(false)
   }
 
   const logout = () => {
@@ -185,8 +214,12 @@ function App() {
             <div className="text-6xl mb-4">📸</div>
             <h2 className="text-2xl font-bold text-white mb-2">Connect Instagram</h2>
             <p className="text-gray-400 mb-6">Link your IG to see your growth stats</p>
-            <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 transition">
-              Connect Instagram
+            <button 
+              onClick={connectInstagram}
+              disabled={loading}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+            >
+              {loading ? 'Connecting...' : 'Connect Instagram'}
             </button>
           </div>
         )}
