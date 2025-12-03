@@ -1,17 +1,17 @@
 # 📈 Creator Growth Tool
 
-A full-stack Instagram analytics platform that helps content creators track engagement metrics, analyze growth trends, and understand their content performance.
+A full-stack Instagram analytics platform that helps content creators track engagement metrics, analyze growth trends, and get AI-powered recommendations to optimize their content strategy.
 
 ![Go](https://img.shields.io/badge/Go-1.25.3-00ADD8?style=flat&logo=go)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?style=flat&logo=postgresql)
-![Status](https://img.shields.io/badge/Status-MVP-yellow.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ## 🎯 Overview
 
-Creator Growth Tool is a production-ready MVP that connects to Instagram via OAuth 2.0 and analyzes your recent posts (up to 50) to provide actionable insights. It calculates engagement rates, tracks posting trends, identifies top-performing content, and delivers trend-based growth recommendations.
+Creator Growth Tool connects to Instagram via OAuth 2.0 and analyzes up to 10,000+ posts to provide actionable insights. It calculates engagement rates, tracks posting trends, identifies top-performing content, and delivers personalized growth recommendations.
 
-Built with production-grade security features including JWT authentication, rate limiting, bcrypt password hashing, and automated long-lived token refresh (60-day Instagram tokens).
+Built as a scalable SaaS solution with production-grade security (JWT authentication, rate limiting, secure token storage) and automated token refresh for long-lived Instagram access.
 
 ## ✨ Features
 
@@ -29,10 +29,10 @@ Built with production-grade security features including JWT authentication, rate
 - Password hashing with bcrypt
 
 ### 📈 Growth Intelligence
-- Smart growth messages based on engagement trend analysis
+- AI-powered growth messages based on engagement trends
 - Posting frequency tracking (weekly/monthly)
-- Period-based comparison analytics (7/14/30/90 day views)
-- Hashtag extraction utility (ready for future analytics)
+- Period-based comparison analytics (30/60/90 day views)
+- Hashtag extraction and analysis
 
 ### 🔄 Data Management
 - Automated post synchronization from Instagram
@@ -302,17 +302,9 @@ CREATE TABLE instagram_posts (
 }
 ```
 
-## 🚧 Roadmap & Future Enhancements
+## 🚧 Future Enhancements
 
-### In Progress
-- [x] Fix Instagram OAuth callback redirect handling (added query param detection)
-- [ ] Test OAuth flow end-to-end
-- [ ] Increase post analysis limit (50 → 1000+)
-- [ ] Deploy frontend to production
-
-### Planned Features
 - [ ] Multi-platform support (TikTok, YouTube, Twitter)
-- [ ] Machine learning for caption suggestions
 - [ ] Advanced analytics (demographics, best posting times)
 - [ ] Content scheduling and calendar
 - [ ] Competitor analysis
@@ -320,7 +312,8 @@ CREATE TABLE instagram_posts (
 - [ ] Email notifications for milestones
 - [ ] Team collaboration features
 - [ ] Custom dashboard widgets
-- [ ] Hashtag performance ranking
+- [ ] AI-powered caption suggestions
+- [ ] Hashtag performance tracking
 
 ## 🤝 Contributing
 
@@ -340,8 +333,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Dan Imran**
 - GitHub: [@imRanDan](https://github.com/imRanDan)
-
-*Built as a portfolio project to demonstrate full-stack development, OAuth integration, and production-grade security practices.*
+- LinkedIn: [Danyal Imran](https://linkedin.com/in/danyalimran)
 
 ## 🙏 Acknowledgments
 
@@ -350,11 +342,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - React and Vite teams for modern frontend tooling
 - Railway for reliable hosting infrastructure
 
-## 📞 Contact
+## 📞 Support
 
-Questions or feedback? Open an issue in the GitHub repository.
+For support, email dan.imran97@gmail.com or open an issue in the GitHub repository.
 
 ---
 
-**Built with ❤️ by Dan Imran | 2024**
+**Built with ❤️ by Dan Imran | 2025**
 
