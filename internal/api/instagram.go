@@ -36,8 +36,9 @@ func ConnectInstagram(c *gin.Context) {
 		return
 	}
 
+	// Facebook login for Instagram Business API (required for insights/analytics)
 	authURL := fmt.Sprintf(
-		"https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=%s&redirect_uri=%s&scope=instagram_business_basic,instagram_business_manage_insights&response_type=code&state=%s",
+		"https://www.facebook.com/v18.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=instagram_basic,pages_show_list,pages_read_engagement,business_management&response_type=code&state=%s",
 		clientID, redirectURI, state,
 	)
 

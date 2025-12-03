@@ -16,6 +16,17 @@ function App() {
     if (token) {
       fetchStats()
     }
+    
+    // Check if user just connected Instagram
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === 'true') {
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+      // Fetch stats to show new connection
+      if (token) {
+        fetchStats()
+      }
+    }
   }, [token])
 
   const signup = async (e) => {
