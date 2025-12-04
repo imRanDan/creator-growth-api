@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Waitlist from './Waitlist'
 
 const API_URL = 'https://creator-growth-api-production.up.railway.app'
 
@@ -11,6 +12,29 @@ function App() {
   const [error, setError] = useState('')
   const [user, setUser] = useState(null)
   const [isSignup, setIsSignup] = useState(false)
+  
+  // Check URL for waitlist route - default to waitlist if on root or /waitlist
+  const getInitialView = () => {
+    const path = window.location.pathname
+    return path === '/waitlist' || path === '/'
+  }
+  const [showWaitlist, setShowWaitlist] = useState(getInitialView())
+
+  // Update view when path changes
+  useEffect(() => {
+    const handlePathChange = () => {
+      const path = window.location.pathname
+      if (path === '/waitlist' || path === '/') {
+        setShowWaitlist(true)
+      } else if (path === '/login') {
+        setShowWaitlist(false)
+      }
+    }
+    handlePathChange()
+    // Listen for popstate (back/forward buttons)
+    window.addEventListener('popstate', handlePathChange)
+    return () => window.removeEventListener('popstate', handlePathChange)
+  }, [])
 
   useEffect(() => {
     if (token) {
@@ -129,10 +153,15 @@ function App() {
     localStorage.removeItem('token')
   }
 
+  // Show waitlist landing page if not logged in and showWaitlist is true
+  if (!token && showWaitlist) {
+    return <Waitlist />
+  }
+
   // Login/Signup Screen
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">📈 Creator Growth</h1>
@@ -180,6 +209,14 @@ function App() {
               >
                 {isSignup ? 'Sign In' : 'Sign Up'}
               </button>
+            </p>
+            <p className="text-center text-gray-500 text-xs mt-4">
+              <a
+                href="/waitlist"
+                className="text-purple-400 hover:text-purple-300"
+              >
+                ← Back to waitlist
+              </a>
             </p>
           </form>
         </div>
