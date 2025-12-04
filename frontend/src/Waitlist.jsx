@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const API_URL = 'https://creator-growth-api-production.up.railway.app'
 
@@ -91,8 +92,8 @@ function Waitlist() {
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-white mb-2 text-center">
-                Join the Waitlist
+              <h2 className="text-3xl font-bold text-white mb-4 text-center">
+                Sign up on the waitlist today!
               </h2>
               <p className="text-gray-400 text-center mb-6">
                 Be the first to know when we launch
@@ -126,12 +127,12 @@ function Waitlist() {
         {/* CTA */}
         <div className="text-center mt-8">
           <p className="text-gray-400 mb-4">Already have access?</p>
-          <a
-            href="/login"
+          <Link
+            to="/login"
             className="text-purple-400 hover:text-purple-300 font-semibold underline"
           >
             Sign in to your account →
-          </a>
+          </Link>
         </div>
       </div>
     </div>

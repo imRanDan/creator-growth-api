@@ -42,3 +42,4 @@ func WaitlistSignup(c *gin.Context) {
 	})
 }
 
+
