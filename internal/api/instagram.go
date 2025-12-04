@@ -147,8 +147,6 @@ func InstagramCallback(c *gin.Context) {
 	if frontendURL == "" {
 		frontendURL = "http://localhost:5173" // default for dev
 	}
-	
-	log.Printf("Instagram connected for user %s, redirecting to: %s", userID, frontendURL)
 	c.Redirect(http.StatusTemporaryRedirect, frontendURL+"?connected=true")
 }
 
