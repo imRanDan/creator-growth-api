@@ -14,14 +14,15 @@ function Dashboard() {
       navigate('/login')
       return
     }
-    fetchStats()
     
     // Check if user just connected Instagram
     const params = new URLSearchParams(window.location.search)
     if (params.get('connected') === 'true') {
       window.history.replaceState({}, '', window.location.pathname)
-      fetchStats()
     }
+    
+    // Fetch stats once after handling query parameters
+    fetchStats()
   }, [token, navigate])
 
   const fetchStats = async () => {
