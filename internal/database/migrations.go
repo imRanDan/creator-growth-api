@@ -66,6 +66,20 @@ func RunMigrations() error {
 		return err
 	}
 
+	// 4️⃣ Create waitlist table for email signups
+	waitlistTable := `
+    CREATE TABLE IF NOT EXISTS waitlist (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    `
+
+	_, err = DB.Exec(waitlistTable)
+	if err != nil {
+		return err
+	}
+
 	log.Println("✅ Database migrations completed")
 	return nil
 }

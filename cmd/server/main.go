@@ -88,6 +88,7 @@ func main() {
 	//Pub routes
 	r.POST("/api/auth/register", api.Register)
 	r.POST("/api/auth/login", limitedMiddleware, api.Login) // rate limit on login
+	r.POST("/api/waitlist/signup", api.WaitlistSignup)      // waitlist signup (no auth needed)
 	r.GET("/auth/instagram/callback", api.InstagramCallback)
 
 	//Protected Routes (requires auth/JWT)
