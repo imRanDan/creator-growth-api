@@ -142,6 +142,13 @@ func InstagramCallback(c *gin.Context) {
 		return
 	}
 
+	// Automatically fetch posts in background after connecting (non-blocking)
+	go func() {
+		if err := services.FetchAndStorePosts(account.ID); err != nil {
+			log.Printf("Auto-fetch posts after connection error: %v", err)
+		}
+	}()
+
 	// Redirect back to frontend
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
