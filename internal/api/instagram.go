@@ -255,3 +255,37 @@ func GetGrowthStats(c *gin.Context) {
 		"stats": stats,
 	})
 }
+
+// DisconnectInstagram removes the connected Instagram account for the authenticated user
+func DisconnectInstagram(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	// Check if account exists before deleting
+	account, err := services.GetInstagramAccountByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no instagram account connected"})
+		return
+	}
+
+	// Delete the account (CASCADE will delete related posts automatically)
+	if err := services.DeleteInstagramAccountByUserID(userID); err != nil {
+		log.Printf("DisconnectInstagram error for user %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "failed to disconnect instagram account",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Instagram account disconnected successfully",
+		"account": map[string]string{
+			"id":       account.ID,
+			"username": account.Username,
+		},
+	})
+}

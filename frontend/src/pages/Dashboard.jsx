@@ -68,6 +68,49 @@ function Dashboard() {
     setLoading(false)
   }
 
+  const disconnectInstagram = async () => {
+    if (!window.confirm('Are you sure you want to disconnect your Instagram account? All your stats and data will be removed.')) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/instagram/disconnect`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      // Handle non-JSON responses (like 404 HTML pages)
+      let data
+      const contentType = res.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json()
+      } else {
+        const text = await res.text()
+        console.error('Non-JSON response:', text)
+        throw new Error(`Server returned ${res.status}: ${res.statusText}`)
+      }
+      
+      if (res.ok) {
+        setStats({ needsConnect: true })
+      } else {
+        console.error('Disconnect error:', data)
+        alert(data.details ? `${data.error}\n\nDetails: ${data.details}` : data.error || 'Failed to disconnect Instagram account')
+      }
+    } catch (err) {
+      console.error('Disconnect error:', err)
+      if (err.message.includes('404')) {
+        alert('Disconnect endpoint not found. Please deploy the latest code to production.')
+      } else {
+        alert(`Failed to disconnect Instagram account: ${err.message}`)
+      }
+    }
+    setLoading(false)
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     navigate('/waitlist')
@@ -158,14 +201,23 @@ function Dashboard() {
               <TrendCard label="Posting Trend" value={stats.stats.posting_trend} />
             </div>
 
-            {/* Refresh Button */}
-            <button
-              onClick={refreshPosts}
-              disabled={loading}
-              className="w-full bg-white/10 border border-white/20 text-white font-semibold py-3 rounded-lg hover:bg-white/20 transition disabled:opacity-50"
-            >
-              {loading ? 'Refreshing...' : '🔄 Refresh Stats'}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={refreshPosts}
+                disabled={loading}
+                className="flex-1 bg-white/10 border border-white/20 text-white font-semibold py-3 rounded-lg hover:bg-white/20 transition disabled:opacity-50"
+              >
+                {loading ? 'Refreshing...' : '🔄 Refresh Stats'}
+              </button>
+              <button
+                onClick={disconnectInstagram}
+                disabled={loading}
+                className="flex-1 bg-red-600/20 border border-red-500/30 text-red-400 font-semibold py-3 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50"
+              >
+                {loading ? 'Disconnecting...' : '🔌 Disconnect Instagram'}
+              </button>
+            </div>
           </>
         )}
       </div>

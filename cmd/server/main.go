@@ -99,6 +99,7 @@ func main() {
 		protected.GET("/user/me", api.GetCurrentUser)
 		protected.GET("/instagram/connect", api.ConnectInstagram)
 		protected.POST("/instagram/refresh", api.RefreshInstagramPosts)
+		protected.DELETE("/instagram/disconnect", api.DisconnectInstagram)
 		protected.GET("/instagram/posts", api.GetInstagramPosts)
 		protected.GET("/growth/stats", api.GetGrowthStats)
 	}
