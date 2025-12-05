@@ -90,6 +90,7 @@ func main() {
 	r.POST("/api/auth/login", limitedMiddleware, api.Login) // rate limit on login
 	r.POST("/api/waitlist/signup", api.WaitlistSignup)      // waitlist signup (no auth needed)
 	r.GET("/auth/instagram/callback", api.InstagramCallback)
+	r.GET("/api/admin/waitlist", api.GetWaitlistEntries) // admin endpoint to view waitlist
 
 	//Protected Routes (requires auth/JWT)
 	protected := r.Group("/api")

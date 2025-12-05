@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Waitlist from './Waitlist'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Admin from './pages/Admin'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/waitlist" replace />} />
       </Routes>
     </BrowserRouter>
