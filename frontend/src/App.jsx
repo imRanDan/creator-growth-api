@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import Waitlist from './Waitlist'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -22,6 +23,7 @@ function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/waitlist" replace />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   )
 }
