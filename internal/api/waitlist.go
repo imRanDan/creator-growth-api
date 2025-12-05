@@ -1,11 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/imRanDan/creator-growth-api/internal/database"
+	"github.com/imRanDan/creator-growth-api/internal/services"
 )
 
 // WaitlistSignup handles email signup for the waitlist
@@ -27,13 +29,27 @@ func WaitlistSignup(c *gin.Context) {
 	}
 
 	// Insert email into waitlist (ON CONFLICT DO NOTHING to handle duplicates gracefully)
-	_, err := database.DB.Exec(
+	result, err := database.DB.Exec(
 		"INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING",
 		req.Email,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add email to waitlist"})
 		return
+	}
+
+	// Check if a row was actually inserted (new signup vs duplicate)
+	rowsAffected, _ := result.RowsAffected()
+	isNewSignup := rowsAffected > 0
+
+	// Send welcome email only for new signups (in background, don't block response)
+	if isNewSignup {
+		go func() {
+			if err := services.SendWelcomeEmail(req.Email); err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Failed to send welcome email to %s: %v\n", req.Email, err)
+			}
+		}()
 	}
 
 	c.JSON(http.StatusOK, gin.H{
