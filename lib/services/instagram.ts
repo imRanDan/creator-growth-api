@@ -157,7 +157,7 @@ export async function getPostsByAccountID(accountID: string, limit: number = 50)
     LIMIT ${limit}
   `
   
-  return result.rows.map(row => ({
+  return result.rows.map((row: any) => ({
     id: row.id,
     igPostID: row.ig_post_id,
     accountID: row.account_id,
